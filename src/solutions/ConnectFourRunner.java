@@ -11,9 +11,9 @@ public class ConnectFourRunner extends MinimaxPrune<Square> {
 
     private static final int ROWS = 6;
     private static final int COLUMNS = 7;
-    private Mark turn = Mark.X;
+    private Mark turn = Mark.O;
     private final ConnectFour game;
-    private final int DEPTH_LIMIT = 15;
+    private final int DEPTH_LIMIT = 8;
 
     public ConnectFourRunner(ConnectFour game) {
         super(game);
@@ -63,9 +63,9 @@ public class ConnectFourRunner extends MinimaxPrune<Square> {
     }
 
     private void announceWinner(int utility){
-        if(utility == 1){
+        if(utility > 0){
             System.out.println("\nPlayer (X) wins!");
-        }else if(utility == -1){
+        }else if(utility < 0){
             System.out.println("\nPlayer (O) wins!");
         }else {
             System.out.println("\nIt's a draw!");

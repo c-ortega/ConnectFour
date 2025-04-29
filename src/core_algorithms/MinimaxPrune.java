@@ -34,7 +34,7 @@ public class MinimaxPrune<A> {
     public A minimaxSearch(int depthLimit){
         int alpha = Integer.MIN_VALUE;
         int beta = Integer.MAX_VALUE;
-        ScoreMove<A> b = max(alpha, beta, depthLimit);
+        ScoreMove<A> b = min(alpha, beta, depthLimit);
 
         if(b.pathOfMoves() == null || b.pathOfMoves().isEmpty()){
             throw new IllegalStateException("No Valid moves found");
@@ -48,28 +48,33 @@ public class MinimaxPrune<A> {
      * @return best score and path of moves for the MAX player
      */
     public ScoreMove<A> max(int alpha, int beta, int depth) {
-        if (game.isTerminal() || depth == 0) {
-            return new ScoreMove<>(game.utility(), new ArrayList<>());
-        }
+        if (game.isTerminal() || depth == 0)
+            return new ScoreMove<>(game.utility(), List.of());
 
         List<A> bestPath = null;
+        int  bestScore = Integer.MIN_VALUE;
+
         for (A move : game.getAllRemainingMoves()) {
             game.execute(move, true);
-            ScoreMove<A> result = min(alpha, beta, depth - 1);
+            ScoreMove<A> response = min(alpha, beta, depth - 1);
             game.undo(move, true);
 
-            if (result.score <= alpha) {
-                return new ScoreMove<>(alpha, bestPath == null ? new ArrayList<>() : bestPath);
-            } else if (result.score > alpha) {
-                alpha = result.score;
-                List<A> newPath = new ArrayList<>(result.pathOfMoves());
-                newPath.add(0, move);
-                bestPath = newPath;
+            if (response.score > bestScore) {
+                bestScore = response.score;
+                bestPath  = new ArrayList<>(response.pathOfMoves());
+                bestPath.add(0, move);
+            }
+
+            alpha = Math.max(alpha, bestScore);
+            if (alpha >= beta) {
+                // prune: we already recorded bestPath, so safe to break
+                break;
             }
         }
 
-        return new ScoreMove<>(alpha, bestPath == null ? new ArrayList<>() : bestPath);
+        return new ScoreMove<>(bestScore, bestPath != null ? bestPath : List.of());
     }
+
 
 
 
@@ -79,27 +84,31 @@ public class MinimaxPrune<A> {
      * @return best score and path of moves for the MIN player
      */
     public ScoreMove<A> min(int alpha, int beta, int depth) {
-        if (game.isTerminal() || depth == 0) {
-            return new ScoreMove<>(game.utility(), new ArrayList<>());
-        }
+        if (game.isTerminal() || depth == 0)
+            return new ScoreMove<>(game.utility(), List.of());
 
-        List<A> bestPath = new ArrayList<>();
+        List<A> bestPath = null;
+        int  bestScore = Integer.MAX_VALUE;
+
         for (A move : game.getAllRemainingMoves()) {
             game.execute(move, false);
-            ScoreMove<A> result = max(alpha, beta, depth - 1);
+            ScoreMove<A> response = max(alpha, beta, depth - 1);
             game.undo(move, false);
 
-            if (result.score >= beta) {
-                return new ScoreMove<>(beta, bestPath == null ? new ArrayList<>() : bestPath);
-            } else if (result.score < beta) {
-                beta = result.score;
-                List<A> newPath = new ArrayList<>(result.pathOfMoves());
-                newPath.add(0, move);
-                bestPath = newPath;
+            if (response.score < bestScore) {
+                bestScore = response.score;
+                bestPath  = new ArrayList<>(response.pathOfMoves());
+                bestPath.add(0, move);
+            }
+
+            beta = Math.min(beta, bestScore);
+            if (beta <= alpha) {
+                // prune with bestPath preserved
+                break;
             }
         }
 
-        return new ScoreMove<>(beta, bestPath);
+        return new ScoreMove<>(bestScore, bestPath != null ? bestPath : List.of());
     }
 
 }

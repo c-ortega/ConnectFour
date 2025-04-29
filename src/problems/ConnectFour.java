@@ -17,7 +17,7 @@ public class ConnectFour implements Game<Square>{
     @Override
     public boolean isTerminal() {
         int utility = utility();
-        if (utility == 1 || utility == -1){
+        if (Math.abs(utility) >= 1_000_000){
             return true;
         }
         return board.size() == ROWS * COLUMNS;
@@ -25,21 +25,76 @@ public class ConnectFour implements Game<Square>{
 
     @Override
     public int utility() {
-        for(int row = 0; row < ROWS; row++){
-            for(int col = 0; col < COLUMNS; col++){
-                Square square = new Square(row, col);
-                if(!board.containsKey(square)){continue;}
-                Mark mark = board.get(square);
+        if (isWinning(Mark.X)) return 1_000_000;
+        if (isWinning(Mark.O)) return -1_000_000;
 
-                if (countConsecutive(row, col, 0, 1, mark) >= WINCOUNT) return mark == Mark.X ? 1 : -1;
-                if (countConsecutive(row, col, 1, 0, mark) >= WINCOUNT) return mark == Mark.X ? 1 : -1;
-                if (countConsecutive(row, col, 1, 1, mark) >= WINCOUNT) return mark == Mark.X ? 1 : -1;
-                if (countConsecutive(row, col, 1, -1, mark) >= WINCOUNT) return mark == Mark.X ? 1 : -1;
+
+        return evaluateBoard(Mark.X) - evaluateBoard(Mark.O);
+    }
+
+    private boolean isWinning(Mark mark) {
+        for (int row = 0; row < ROWS; row++) {
+            for (int col = 0; col < COLUMNS; col++) {
+                if (countConsecutive(row, col, 0, 1, mark) >= WINCOUNT) return true;
+                if (countConsecutive(row, col, 1, 0, mark) >= WINCOUNT) return true;
+                if (countConsecutive(row, col, 1, 1, mark) >= WINCOUNT) return true;
+                if (countConsecutive(row, col, 1, -1, mark) >= WINCOUNT) return true;
             }
         }
+        return false;
+    }
 
+    private int evaluateBoard(Mark mark) {
+        int score = 0;
 
-        return 0;
+        for (int row = 0; row < ROWS; row++) {
+            Square center = new Square(row, COLUMNS / 2);
+            if(board.get(center) == mark){
+                score += 3;
+            }
+        }
+        score += evaluateWindow(mark);
+
+        return score;
+    }
+
+    private int evaluateWindow(Mark mark) {
+        int score = 0;
+
+        int[][] directions = {
+                {0, 1},
+                {1, 0},
+                {1, 1},
+                {1, -1}
+        };
+        for (int row = 0; row < ROWS; row++) {
+            for (int col = 0; col < COLUMNS; col++) {
+                for (int[] direction : directions) {
+                    int count = 0;
+                    int empty = 0;
+                    int opponentCount = 0;
+
+                    for (int i = 0; i < WINCOUNT; i++) {
+                        int r = row + direction[0] * i;
+                        int c = col + direction[1] * i;
+
+                        if(r < 0 || r >= ROWS || c < 0 || c >= COLUMNS){ break;}
+
+                        Square sq = new Square(r, c);
+                        Mark current = board.get(sq);
+
+                        if(current == mark){count++;}
+                        else if (current == null) {empty++;}
+                        else {opponentCount++;}
+                    }
+
+                    if (count == 3 && empty == 1){score += 100;}
+                    else if (count == 2 && empty == 2){score += 10;}
+                    if(opponentCount == 3 && empty == 1){score -= 500;}
+                }
+            }
+        }
+        return score;
     }
 
     private int countConsecutive(int row, int col, int dRow, int dCol, Mark mark){
@@ -78,7 +133,8 @@ public class ConnectFour implements Game<Square>{
     @Override
     public List<Square> getAllRemainingMoves() {
         List<Square> moves = new ArrayList<>();
-        for(int col = 0; col < COLUMNS; col++){
+        List<Integer> preferredColumns = List.of(3, 2, 4, 1, 5, 0, 6);
+        for(int col : preferredColumns){
             for(int row = ROWS - 1; row >= 0; row--){
                 Square square = new Square(row, col);
                 if(!board.containsKey(square)){
